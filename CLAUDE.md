@@ -21,7 +21,7 @@ After committing, push promptly so the other machine can pull. Don't leave commi
 
 ## Logs and guides
 
-- **`JOURNEY.md`** — Timeline of major blockers, wins, and findings. Append to this as the build progresses so the journey is reconstructable later.
-- **`GEMMA_TRAINING_GUIDE.md`** — Anything about training the Gemma model, the training pipeline, or troubleshooting. This is meant to be **reusable across projects**, so write it like a standalone reference, not a project diary.
-
-Neither file exists yet — create when there's something real to record.
+- **`JOURNEY.md`** — Timeline of major blockers, wins, and findings. Append to this as the build progresses so the journey is reconstructable later. Newest entries at the bottom, one dated heading per entry.
+- **`GEMMA_TRAINING_GUIDE.md`** — Anything about training the Gemma model, the training pipeline, or troubleshooting. Reusable across projects — write it like a standalone reference, not a project diary.
+- **`docs/setup.md`** — Original repo setup brief (kept for context).
+- **`docs/LABELING_PIPELINE.md`** — Brief for the labeling-pipeline build (next task on the rig).
