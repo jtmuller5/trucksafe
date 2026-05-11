@@ -1,22 +1,22 @@
 import 'dart:convert';
 
 import '../state/app_controller.dart';
-import 'categories.dart';
+import 'inspections.dart';
 
-/// Parses the model's raw text into a [StepResult]. Tolerant of common
-/// model-emit quirks: surrounding markdown fences, leading/trailing prose,
+/// Parses the model's raw text into an [EvidenceResult]. Tolerant of
+/// common emit quirks: surrounding markdown fences, leading/trailing prose,
 /// stray whitespace. Falls back to a "retake" status if the JSON can't be
 /// recovered.
-StepResult parseStepResult({
-  required InspectionCategory category,
+EvidenceResult parseEvidenceResult({
+  required EvidenceType evidenceType,
   required String rawText,
   required DateTime capturedAt,
   required String imagePath,
 }) {
   final json = _extractJson(rawText);
   if (json == null) {
-    return StepResult(
-      category: category,
+    return EvidenceResult(
+      evidenceType: evidenceType,
       status: 'retake',
       summary: 'Model did not return parseable JSON. Retake the photo.',
       confidence: 'low',
@@ -31,8 +31,8 @@ StepResult parseStepResult({
   try {
     obj = jsonDecode(json) as Map<String, dynamic>;
   } on FormatException {
-    return StepResult(
-      category: category,
+    return EvidenceResult(
+      evidenceType: evidenceType,
       status: 'retake',
       summary: 'Model returned malformed JSON. Retake the photo.',
       confidence: 'low',
@@ -51,8 +51,8 @@ StepResult parseStepResult({
       ? issuesRaw.whereType<String>().toList()
       : const <String>[];
 
-  return StepResult(
-    category: category,
+  return EvidenceResult(
+    evidenceType: evidenceType,
     status: status,
     summary: summary,
     confidence: confidence,

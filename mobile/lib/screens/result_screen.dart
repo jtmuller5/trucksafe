@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../inference/categories.dart';
+import '../inference/inspections.dart';
 import '../state/app_scope.dart';
 import '../storage/inspection_repository.dart';
 
@@ -66,15 +66,10 @@ class _ResultBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fmt = DateFormat('MMM d, y · h:mm a');
-    final color = switch (record.overallStatus) {
-      'pass' => Colors.green.shade600,
-      'fail' => Colors.red.shade700,
-      'retake' => Colors.amber.shade700,
-      _ => Theme.of(context).colorScheme.outline,
-    };
-    final issues = <String>[
-      for (final s in record.steps.values)
-        ...s.issuesDetected.map((i) => '${s.category.label}: $i'),
+    final color = _statusColor(context, record.overallStatus);
+    final allIssues = <String>[
+      for (final i in Inspection.values)
+        ...?record.verdicts[i]?.issues.map((s) => '${i.label}: $s'),
     ];
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -88,15 +83,7 @@ class _ResultBody extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(
-                record.overallStatus == 'pass'
-                    ? Icons.check_circle
-                    : record.overallStatus == 'fail'
-                        ? Icons.cancel
-                        : Icons.refresh,
-                color: color,
-                size: 32,
-              ),
+              Icon(_statusIcon(record.overallStatus), color: color, size: 32),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -120,42 +107,67 @@ class _ResultBody extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
-        if (issues.isNotEmpty) ...[
-          Text('Issues across all steps',
+        if (allIssues.isNotEmpty) ...[
+          Text('Issues across all inspections',
               style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 6),
-          for (final i in issues)
+          for (final i in allIssues)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Text('• $i'),
             ),
           const SizedBox(height: 20),
         ],
-        Text('Per-step detail',
-            style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
-        for (final c in InspectionCategory.values)
-          if (record.steps[c] != null) _StepCard(step: record.steps[c]!),
+        for (final i in Inspection.values)
+          _InspectionDetail(
+            inspection: i,
+            verdict: record.verdicts[i]!,
+            evidence: record.evidence[i] ?? const [],
+          ),
       ],
     );
   }
+
+  static Color _statusColor(BuildContext context, String s) {
+    return switch (s) {
+      'pass' => Colors.green.shade600,
+      'fail' => Colors.red.shade700,
+      'retake' => Colors.amber.shade700,
+      _ => Theme.of(context).colorScheme.outline,
+    };
+  }
+
+  static IconData _statusIcon(String s) {
+    return switch (s) {
+      'pass' => Icons.check_circle,
+      'fail' => Icons.cancel,
+      'retake' => Icons.refresh,
+      _ => Icons.hourglass_empty,
+    };
+  }
 }
 
-class _StepCard extends StatelessWidget {
-  const _StepCard({required this.step});
+class _InspectionDetail extends StatelessWidget {
+  const _InspectionDetail({
+    required this.inspection,
+    required this.verdict,
+    required this.evidence,
+  });
 
-  final StoredStep step;
+  final Inspection inspection;
+  final StoredVerdict verdict;
+  final List<StoredEvidence> evidence;
 
   @override
   Widget build(BuildContext context) {
-    final color = switch (step.status) {
+    final color = switch (verdict.status) {
       'pass' => Colors.green.shade600,
       'fail' => Colors.red.shade700,
       'retake' => Colors.amber.shade700,
       _ => Theme.of(context).colorScheme.outline,
     };
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -171,7 +183,7 @@ class _StepCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    step.status.toUpperCase(),
+                    verdict.status.toUpperCase(),
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -181,29 +193,92 @@ class _StepCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    step.category.label,
+                    inspection.label,
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ),
+                if (verdict.confidence.isNotEmpty)
+                  Text(
+                    verdict.confidence,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                  ),
               ],
             ),
-            const SizedBox(height: 8),
-            if (step.summary.isNotEmpty) Text(step.summary),
-            if (step.imagePath.isNotEmpty &&
-                File(step.imagePath).existsSync()) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(step.imagePath),
-                  height: 140,
-                  fit: BoxFit.cover,
+            if (evidence.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'No photos captured.',
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
+            for (final e in evidence) ...[
+              const SizedBox(height: 12),
+              _EvidenceTile(evidence: e),
             ],
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EvidenceTile extends StatelessWidget {
+  const _EvidenceTile({required this.evidence});
+
+  final StoredEvidence evidence;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (evidence.imagePath.isNotEmpty &&
+            File(evidence.imagePath).existsSync())
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: Image.file(
+              File(evidence.imagePath),
+              width: 84,
+              height: 84,
+              fit: BoxFit.cover,
+            ),
+          )
+        else
+          Container(
+            width: 84,
+            height: 84,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Icon(Icons.image_not_supported_outlined),
+          ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                evidence.evidenceType.label,
+                style: Theme.of(context)
+                    .textTheme
+                    .bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${evidence.status.toUpperCase()} · ${evidence.summary}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

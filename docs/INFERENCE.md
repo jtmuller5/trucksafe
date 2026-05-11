@@ -43,24 +43,57 @@ Implication for this codebase:
   shows pad tokens or garbage on iOS, this is the first thing to check
   (`GEMMA_TRAINING_GUIDE.md:288`).
 
+## Data model: two inspections × N evidence photos
+
+The PRD originally treated the three photos as three independent
+inspections. That was wrong — fifth_wheel side view and lock_jaws
+underneath both answer the same safety question ("is the front coupling
+engaged?"). The Dart side now mirrors the corrected model:
+
+- **`Inspection`** (enum) — `fifthWheelCoupling`, `pintleHook`. What
+  the driver completes.
+- **`EvidenceType`** (enum) — `sideView`, `lockJawsUnderneath`,
+  `rearAssembly`. What gets photographed. Each evidence type maps to one
+  inspection, carries `isRequired` / `isDominant` flags, and points at
+  one `shared/schemas/<id>.json` file.
+
+The per-photo model contract is unchanged — each photo gets a single
+schema-shaped JSON. The app composes the per-photo verdicts into one
+inspection-level verdict (see `state/composition.dart`).
+
+Side view is the **dominant** (load-bearing) evidence for the front
+coupling. Lock jaws underneath is optional confirmation — a hard shot to
+get and the v5 audit flagged its low localizable rate. A clean side view
+alone produces `pass` + `confidence: side_view_only`; adding the lock
+jaws shot upgrades to `confidence: high`.
+
+When the v5 schema files (`fifth_wheel_coupling.json`,
+`pintle_hook.json`) land, the per-photo schemas in
+`assets/schemas/` will be replaced and `prompts.dart` updated. The
+two-inspection / evidence-type shape stays.
+
 ## What lives where
 
-- `lib/inference/categories.dart` — the three inspection categories,
-  keyed off the JSON-Schema `category.const` values in
-  `shared/schemas/*.json`.
-- `lib/inference/prompts.dart` — per-category system prompt. The
+- `lib/inference/inspections.dart` — `Inspection` and `EvidenceType`
+  enums plus their mapping.
+- `lib/inference/prompts.dart` — per-evidence-type system prompt. The
   corresponding `shared/schemas/<id>.json` is loaded from
   `assets/schemas/` and inlined into the system prompt so Gemma 4's
   native structured-output behavior targets the right shape.
 - `lib/inference/gemma_session.dart` — thin wrapper over
   `FlutterGemma.installModel().fromFile()` + `model.createSession()` +
   `session.addQueryChunk(Message.withImage(...))`. One session per
-  inference call (we don't want chat history bleeding between steps).
+  inference call (we don't want chat history bleeding between photos).
 - `lib/inference/image_prep.dart` — resize to ~896px on the long edge
   and JPEG-encode before handing bytes to the model.
 - `lib/inference/result_parser.dart` — tolerant JSON extractor; falls
   back to `overall_status: "retake"` when the model returns something
   unparseable.
+- `lib/state/composition.dart` — `ComposedVerdict.compose(inspection,
+  photos)`. Rules: any `fail` → fail; all `pass` → pass with confidence
+  scaled by evidence diversity; all `retake`/`unclear` → retake; mixed
+  → pass with reduced confidence. Unit-tested in
+  `test/composition_test.dart`.
 
 ## Test model for first-pass integration
 

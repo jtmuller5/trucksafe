@@ -1,19 +1,18 @@
 import 'package:flutter/services.dart' show rootBundle;
 
-import 'categories.dart';
+import 'inspections.dart';
 
-/// Per-category system prompt + schema JSON loaded from bundled assets.
-/// The schema content is the JSON Schema string itself, embedded directly
-/// into the system prompt so Gemma 4's native structured-output behavior
-/// targets the right shape.
-class CategoryPrompt {
-  CategoryPrompt({
-    required this.category,
+/// Per-evidence-type system prompt + user prompt. The JSON Schema text
+/// is loaded from the bundled asset and inlined into the system prompt so
+/// Gemma 4's native structured-output behavior targets the right shape.
+class EvidencePrompt {
+  EvidencePrompt({
+    required this.evidenceType,
     required this.systemPrompt,
     required this.userPrompt,
   });
 
-  final InspectionCategory category;
+  final EvidenceType evidenceType;
   final String systemPrompt;
   final String userPrompt;
 }
@@ -36,23 +35,23 @@ Decision rules:
 - human_readable_summary is one or two short sentences a driver can act on.
 ''';
 
-const _perCategory = {
-  InspectionCategory.fifthWheel: '''
-Category: fifth_wheel_side_view.
+const _perEvidence = {
+  EvidenceType.sideView: '''
+This is the side view of the fifth wheel coupling.
 Pass criteria:
 - The trailer apron is flush against the fifth wheel plate with no visible
   daylight between them.
 - The release handle is in the stowed position.
 ''',
-  InspectionCategory.lockJaws: '''
-Category: lock_jaws_closeup.
+  EvidenceType.lockJawsUnderneath: '''
+This is the underneath view of the lock jaws.
 Pass criteria:
 - The locking jaws are fully closed around the kingpin shank.
 - The kingpin is visible in the jaws.
 - The lock indicator is in the locked position (if visible in frame).
 ''',
-  InspectionCategory.pintleHook: '''
-Category: pintle_hook_and_chains.
+  EvidenceType.rearAssembly: '''
+This is the rear pintle hook + safety chains assembly.
 Pass criteria:
 - The hook latch is closed.
 - A safety pin is visible through the latch hole.
@@ -63,14 +62,12 @@ Pass criteria:
 
 const _userPrompt = 'Inspect this photo and emit the JSON.';
 
-/// Returns the system + user prompt for [category]. The schema JSON is
-/// loaded from the bundled asset and inlined into the system prompt.
-Future<CategoryPrompt> loadCategoryPrompt(InspectionCategory category) async {
-  final schemaJson = await rootBundle.loadString(category.schemaAsset);
-  final perCat = _perCategory[category]!;
+Future<EvidencePrompt> loadEvidencePrompt(EvidenceType evidence) async {
+  final schemaJson = await rootBundle.loadString(evidence.schemaAsset);
+  final perCat = _perEvidence[evidence]!;
   final system = '$_baseRules\n$perCat\nSchema:\n$schemaJson';
-  return CategoryPrompt(
-    category: category,
+  return EvidencePrompt(
+    evidenceType: evidence,
     systemPrompt: system,
     userPrompt: _userPrompt,
   );

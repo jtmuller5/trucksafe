@@ -26,10 +26,16 @@ starting an inspection. Push the `.litertlm` to the device first:
   `AppController` and runs the app.
 - `lib/state/` — vanilla `ChangeNotifier` (`AppController`) wrapped in an
   `InheritedNotifier` (`AppScope`). No Riverpod, no Provider.
+  `composition.dart` turns per-photo verdicts into per-inspection ones.
 - `lib/inference/` — `.litertlm` plumbing on top of `flutter_gemma`.
+  `inspections.dart` defines the two inspections and the evidence types
+  that feed each.
 - `lib/screens/` — Home / Inspection / Capture / Result / Settings.
+  The inspection screen shows **two** inspections (front coupling, rear
+  hitch), each gathering one or more evidence photos.
 - `lib/storage/` — `sqflite` repository for inspection records.
 - `assets/schemas/` — copy of `../shared/schemas/*.json` for runtime use.
+- `test/composition_test.dart` — verdict composition rules.
 - `test/schemas_contract_test.dart` — fails when the Dart enum keys drift
   from the canonical JSON Schemas.
 

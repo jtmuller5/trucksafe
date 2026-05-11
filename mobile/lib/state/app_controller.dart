@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../inference/categories.dart';
 import '../inference/gemma_session.dart';
+import '../inference/inspections.dart';
 import '../storage/inspection_repository.dart';
+import 'composition.dart';
 
 const _kModelPathKey = 'model_file_path';
 
@@ -87,10 +88,13 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void recordStepResult(InspectionCategory category, StepResult result) {
+  /// Records (or replaces) the evidence photo result for a given evidence
+  /// type. Re-shooting the same evidence type overwrites the prior
+  /// result for that type within the active inspection.
+  void recordEvidence(EvidenceResult result) {
     final a = _active;
     if (a == null) return;
-    a.results[category] = result;
+    a.upsertEvidence(result);
     notifyListeners();
   }
 
@@ -115,29 +119,59 @@ class AppController extends ChangeNotifier {
   }
 }
 
+/// In-flight inspection: an ordered map of [Inspection] → recorded
+/// evidence photos for that inspection.
 class ActiveInspection {
   ActiveInspection({required this.startedAt});
 
   final DateTime startedAt;
-  final Map<InspectionCategory, StepResult> results = {};
+  final Map<Inspection, List<EvidenceResult>> evidence = {
+    for (final i in Inspection.values) i: <EvidenceResult>[],
+  };
 
-  bool get isComplete =>
-      InspectionCategory.values.every((c) => results.containsKey(c));
+  void upsertEvidence(EvidenceResult r) {
+    final list = evidence[r.evidenceType.inspection]!;
+    list.removeWhere((e) => e.evidenceType == r.evidenceType);
+    list.add(r);
+  }
 
-  /// Overall pass if every step's result is "pass". Any fail/retake yields
-  /// that label as overall.
+  List<EvidenceResult> photosFor(Inspection i) => List.unmodifiable(evidence[i]!);
+
+  Set<EvidenceType> evidenceTypesPresent(Inspection i) =>
+      evidence[i]!.map((e) => e.evidenceType).toSet();
+
+  /// True when every inspection has at least its required evidence types
+  /// captured. Optional evidence does not gate completion.
+  bool get isReadyToFinalize =>
+      Inspection.values.every(isInspectionReady);
+
+  bool isInspectionReady(Inspection i) {
+    final present = evidenceTypesPresent(i);
+    return i.requiredEvidence.every(present.contains);
+  }
+
+  ComposedVerdict verdictFor(Inspection i) =>
+      ComposedVerdict.compose(i, evidence[i]!);
+
+  /// Overall status combines the per-inspection verdicts:
+  /// - any inspection `fail` → overall `fail`
+  /// - any inspection `retake` → overall `retake`
+  /// - any inspection `incomplete` → overall `incomplete`
+  /// - all `pass` → `pass`
   String get overallStatus {
-    if (results.values.any((r) => r.status == 'fail')) return 'fail';
-    if (results.values.any((r) => r.status == 'retake')) return 'retake';
-    if (results.values.every((r) => r.status == 'pass')) return 'pass';
-    return 'incomplete';
+    final verdicts =
+        Inspection.values.map(verdictFor).map((v) => v.status).toList();
+    if (verdicts.contains('fail')) return 'fail';
+    if (verdicts.contains('retake')) return 'retake';
+    if (verdicts.contains('incomplete')) return 'incomplete';
+    return 'pass';
   }
 }
 
-/// Outcome of running a single inspection step.
-class StepResult {
-  StepResult({
-    required this.category,
+/// Outcome of running one evidence photo through the model.
+class EvidenceResult {
+  EvidenceResult({
+    required this.evidenceType,
     required this.status,
     required this.summary,
     required this.confidence,
@@ -147,18 +181,18 @@ class StepResult {
     required this.imagePath,
   });
 
-  final InspectionCategory category;
+  final EvidenceType evidenceType;
 
-  /// "pass" | "fail" | "retake" | "error".
+  /// Per-photo "pass" | "fail" | "retake" | "unclear" | "error".
   final String status;
   final String summary;
 
-  /// "high" | "medium" | "low" | "" when missing.
+  /// Per-photo model confidence: "high" | "medium" | "low" | "" missing.
   final String confidence;
   final List<String> issuesDetected;
   final String rawJson;
   final DateTime capturedAt;
 
-  /// Local file path to the captured image. Persisted; not deleted.
+  /// Local file path to the captured image.
   final String imagePath;
 }

@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-import '../inference/categories.dart';
 import '../inference/image_prep.dart';
+import '../inference/inspections.dart';
 import '../inference/prompts.dart';
 import '../inference/result_parser.dart';
 import '../state/app_controller.dart';
@@ -29,14 +29,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
   XFile? _captured;
   _Phase _phase = _Phase.preview;
   String? _errorMessage;
-  StepResult? _result;
-  InspectionCategory? _category;
+  EvidenceResult? _result;
+  EvidenceType? _evidence;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _category ??=
-        ModalRoute.of(context)!.settings.arguments as InspectionCategory;
+    _evidence ??=
+        ModalRoute.of(context)!.settings.arguments as EvidenceType;
     _cameraInit ??= _initCamera();
   }
 
@@ -92,8 +92,8 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   Future<void> _runInference() async {
     final shot = _captured;
-    final cat = _category;
-    if (shot == null || cat == null) return;
+    final evidence = _evidence;
+    if (shot == null || evidence == null) return;
 
     setState(() => _phase = _Phase.running);
     final app = AppScope.read(context);
@@ -103,24 +103,24 @@ class _CaptureScreenState extends State<CaptureScreen> {
       final imagesDir = Directory(p.join(docs.path, 'inspections'));
       await imagesDir.create(recursive: true);
       final ts = DateTime.now().millisecondsSinceEpoch;
-      final destPath = p.join(imagesDir.path, '${cat.schemaId}_$ts.jpg');
+      final destPath = p.join(imagesDir.path, '${evidence.name}_$ts.jpg');
       await File(shot.path).copy(destPath);
 
       final jpegBytes = await preprocessJpeg(File(destPath));
       final session = await app.ensureSession();
-      final prompt = await loadCategoryPrompt(cat);
+      final prompt = await loadEvidencePrompt(evidence);
       final raw = await session.generate(
         systemPrompt: prompt.systemPrompt,
         userPrompt: prompt.userPrompt,
         imageJpeg: jpegBytes,
       );
-      final result = parseStepResult(
-        category: cat,
+      final result = parseEvidenceResult(
+        evidenceType: evidence,
         rawText: raw,
         capturedAt: DateTime.now(),
         imagePath: destPath,
       );
-      app.recordStepResult(cat, result);
+      app.recordEvidence(result);
       if (!mounted) return;
       setState(() {
         _result = result;
@@ -137,34 +137,32 @@ class _CaptureScreenState extends State<CaptureScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cat = _category;
-    if (cat == null) {
+    final evidence = _evidence;
+    if (evidence == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     return Scaffold(
-      appBar: AppBar(
-        title: Text(cat.label),
-      ),
-      body: SafeArea(child: _buildBody(cat)),
+      appBar: AppBar(title: Text(evidence.label)),
+      body: SafeArea(child: _buildBody(evidence)),
     );
   }
 
-  Widget _buildBody(InspectionCategory cat) {
+  Widget _buildBody(EvidenceType evidence) {
     switch (_phase) {
       case _Phase.preview:
-        return _buildPreview(cat);
+        return _buildPreview(evidence);
       case _Phase.captured:
-        return _buildCaptured(cat);
+        return _buildCaptured(evidence);
       case _Phase.running:
-        return _buildRunning(cat);
+        return _buildRunning(evidence);
       case _Phase.done:
-        return _buildDone(cat);
+        return _buildDone(evidence);
       case _Phase.error:
         return _buildError();
     }
   }
 
-  Widget _buildPreview(InspectionCategory cat) {
+  Widget _buildPreview(EvidenceType evidence) {
     return FutureBuilder<void>(
       future: _cameraInit,
       builder: (context, snapshot) {
@@ -177,14 +175,21 @@ class _CaptureScreenState extends State<CaptureScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: Text(
-                cat.instruction,
+                evidence.instruction,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
             Expanded(
               child: AspectRatio(
                 aspectRatio: _camera!.value.aspectRatio,
-                child: CameraPreview(_camera!),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CameraPreview(_camera!),
+                    if (evidence.showsTargetOverlay)
+                      _TargetOverlay(label: _overlayLabel(evidence)),
+                  ],
+                ),
               ),
             ),
             Padding(
@@ -201,7 +206,14 @@ class _CaptureScreenState extends State<CaptureScreen> {
     );
   }
 
-  Widget _buildCaptured(InspectionCategory cat) {
+  String _overlayLabel(EvidenceType evidence) {
+    return switch (evidence) {
+      EvidenceType.sideView => 'Frame the apron–plate seam',
+      _ => '',
+    };
+  }
+
+  Widget _buildCaptured(EvidenceType evidence) {
     return Column(
       children: [
         Expanded(child: Image.file(File(_captured!.path), fit: BoxFit.contain)),
@@ -229,7 +241,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     );
   }
 
-  Widget _buildRunning(InspectionCategory cat) {
+  Widget _buildRunning(EvidenceType evidence) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -262,7 +274,7 @@ class _CaptureScreenState extends State<CaptureScreen> {
     );
   }
 
-  Widget _buildDone(InspectionCategory cat) {
+  Widget _buildDone(EvidenceType evidence) {
     final r = _result!;
     final color = switch (r.status) {
       'pass' => Colors.green.shade600,
@@ -361,6 +373,73 @@ class _CaptureScreenState extends State<CaptureScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Translucent target rectangle drawn over the camera preview. Currently
+/// used only on the side-view shot — the load-bearing photo for the front
+/// coupling inspection, where framing the apron–plate seam matters most.
+class _TargetOverlay extends StatelessWidget {
+  const _TargetOverlay({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: LayoutBuilder(builder: (context, constraints) {
+        final w = constraints.maxWidth;
+        final h = constraints.maxHeight;
+        // Centered rectangle: 70% wide, 30% tall — roughly the strip where
+        // the apron meets the fifth wheel plate in a driver-eye side view.
+        final boxW = w * 0.7;
+        final boxH = h * 0.3;
+        final left = (w - boxW) / 2;
+        final top = (h - boxH) / 2;
+        return Stack(
+          children: [
+            Container(color: Colors.black.withValues(alpha: 0.18)),
+            Positioned(
+              left: left,
+              top: top,
+              width: boxW,
+              height: boxH,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.transparent,
+                ),
+              ),
+            ),
+            if (label.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: top - 28,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      }),
     );
   }
 }
