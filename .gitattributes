@@ -1,0 +1,3 @@
+# Reserved for Git LFS pointers. Add patterns here if any binary asset
+# ever needs LFS — model weights and image archives should not be
+# committed at all (see .gitignore).

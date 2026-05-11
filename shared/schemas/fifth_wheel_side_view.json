@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FifthWheelSideView",
+  "description": "Verifies the trailer is fully seated against the fifth wheel plate with no visible gap.",
+  "type": "object",
+  "required": ["category", "observations", "issues_detected", "overall_status", "confidence", "human_readable_summary"],
+  "properties": {
+    "category": { "const": "fifth_wheel_side_view" },
+    "observations": {
+      "type": "object",
+      "required": ["trailer_seated_flush", "visible_gap_between_apron_and_plate", "release_handle_position", "image_quality"],
+      "properties": {
+        "trailer_seated_flush": { "enum": ["yes", "no", "unclear"] },
+        "visible_gap_between_apron_and_plate": { "enum": ["none", "minor", "obvious"] },
+        "release_handle_position": { "enum": ["stowed", "extended", "unclear"] },
+        "image_quality": { "enum": ["good", "poor"] }
+      }
+    },
+    "issues_detected": { "type": "array", "items": { "type": "string" } },
+    "overall_status": { "enum": ["pass", "fail", "retake"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "human_readable_summary": { "type": "string", "maxLength": 500 }
+  }
+}

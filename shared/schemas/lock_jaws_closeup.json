@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LockJawsCloseup",
+  "description": "Verifies the locking jaws have fully closed around the kingpin shank.",
+  "type": "object",
+  "required": ["category", "observations", "issues_detected", "overall_status", "confidence", "human_readable_summary"],
+  "properties": {
+    "category": { "const": "lock_jaws_closeup" },
+    "observations": {
+      "type": "object",
+      "required": ["jaws_fully_closed_around_kingpin", "kingpin_visible_in_jaws", "lock_indicator_position", "image_quality"],
+      "properties": {
+        "jaws_fully_closed_around_kingpin": { "enum": ["yes", "no", "unclear"] },
+        "kingpin_visible_in_jaws": { "type": "boolean" },
+        "lock_indicator_position": { "enum": ["locked", "unlocked", "not_visible"] },
+        "image_quality": { "enum": ["good", "poor"] }
+      }
+    },
+    "issues_detected": { "type": "array", "items": { "type": "string" } },
+    "overall_status": { "enum": ["pass", "fail", "retake"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "human_readable_summary": { "type": "string", "maxLength": 500 }
+  }
+}

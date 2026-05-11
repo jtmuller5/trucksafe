@@ -1,0 +1,59 @@
+# Image data — never commit
+/training/data/images/
+/training/data/labels/
+/training/data/splits/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.heif
+!docs/**/*.png
+!docs/**/*.jpg
+!shared/**/*.png
+!mobile/**/*.png
+!mobile/**/*.jpg
+
+# Model weights — never commit
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+*.litertlm
+*.gguf
+/training/checkpoints/
+/training/exports/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment
+.env
+.env.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Flutter — placeholder, populate when scaffolded
+/mobile/build/
+/mobile/.dart_tool/
+/mobile/.flutter-plugins
+/mobile/.flutter-plugins-dependencies
+
+# Node — placeholder, populate when scaffolded
+node_modules/
+.next/
+dist/
+
+# Logs / experiments
+*.log
+wandb/
