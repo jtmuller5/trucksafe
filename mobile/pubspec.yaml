@@ -1,0 +1,42 @@
+name: trucksafe
+description: "On-device commercial truck pre-trip safety inspector"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # On-device Gemma 4 inference via LiteRT-LM C API (FFI under the hood on
+  # Android + iOS). See docs/INFERENCE.md for the chat-template parity story.
+  flutter_gemma: ^0.15.0
+
+  # Camera capture + image preprocessing (resize/JPEG-encode before inference).
+  camera: ^0.11.0
+  image: ^4.2.0
+
+  # Local-only inspection log + simple key/value for the model file path.
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+
+  # Time formatting for the inspections list.
+  intl: ^0.20.2
+
+  # Reads JSON Schemas at runtime for the Dart-vs-schema contract test.
+  yaml: ^3.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/schemas/

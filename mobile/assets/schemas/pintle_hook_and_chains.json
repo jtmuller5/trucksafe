@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PintleHookAndChains",
+  "description": "Verifies the pintle hook is closed, safety pin inserted, and at least two safety chains are hooked and crossed.",
+  "type": "object",
+  "required": ["category", "observations", "issues_detected", "overall_status", "confidence", "human_readable_summary"],
+  "properties": {
+    "category": { "const": "pintle_hook_and_chains" },
+    "observations": {
+      "type": "object",
+      "required": ["hook_latch_state", "safety_pin_visible", "safety_chains_count", "safety_chains_hooked", "safety_chains_crossed", "image_quality"],
+      "properties": {
+        "hook_latch_state": { "enum": ["closed", "open", "unclear"] },
+        "safety_pin_visible": { "type": "boolean" },
+        "safety_chains_count": { "type": "integer", "minimum": 0 },
+        "safety_chains_hooked": { "type": "boolean" },
+        "safety_chains_crossed": { "type": "boolean" },
+        "image_quality": { "enum": ["good", "poor"] }
+      }
+    },
+    "issues_detected": { "type": "array", "items": { "type": "string" } },
+    "overall_status": { "enum": ["pass", "fail", "retake"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "human_readable_summary": { "type": "string", "maxLength": 500 }
+  }
+}
