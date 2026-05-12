@@ -1,0 +1,35 @@
+{
+  "stage_1_candidate_pool": {
+    "archive_root": "/Users/josephmuller/Dev/apps/truck_safe/training_images",
+    "categories": [
+      "fifth_wheel",
+      "lock_jaw",
+      "pintle_hook"
+    ],
+    "eval_draw_seed": 20260512,
+    "exclude_root": "/Users/josephmuller/projects/trucksafe-data/sample-batch-01",
+    "finished_utc": "2026-05-12T11:20:19+00:00",
+    "per_category_requested": 800,
+    "per_folder": {
+      "fifth_wheel": {
+        "archive_total": 33382,
+        "candidate_pool_size": 800,
+        "eligible_after_exclusion": 30882,
+        "excluded_in_sample_batch_01": 2500
+      },
+      "lock_jaw": {
+        "archive_total": 33126,
+        "candidate_pool_size": 800,
+        "eligible_after_exclusion": 33126,
+        "excluded_in_sample_batch_01": 0
+      },
+      "pintle_hook": {
+        "archive_total": 11281,
+        "candidate_pool_size": 800,
+        "eligible_after_exclusion": 8781,
+        "excluded_in_sample_batch_01": 2500
+      }
+    },
+    "started_utc": "2026-05-12T11:20:18+00:00"
+  }
+}
