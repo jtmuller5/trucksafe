@@ -57,3 +57,7 @@ dist/
 # Logs / experiments
 *.log
 wandb/
+
+# Eval set: keep the manifest/README/draw_log + candidate_ids stubs,
+# exclude the bulky v5.6 raw labeler outputs (2,400 JSONs + crops per run).
+/eval/*/v5_6_candidate_labels/
