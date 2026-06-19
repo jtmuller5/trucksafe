@@ -22,6 +22,13 @@ After committing, push promptly so the other machine can pull. Don't leave commi
 ## Logs and guides
 
 - **`JOURNEY.md`** — Timeline of major blockers, wins, and findings. Append to this as the build progresses so the journey is reconstructable later. Newest entries at the bottom, one dated heading per entry.
-- **`GEMMA_TRAINING_GUIDE.md`** — Anything about training the Gemma model, the training pipeline, or troubleshooting. Reusable across projects — write it like a standalone reference, not a project diary.
 - **`docs/setup.md`** — Original repo setup brief (kept for context).
 - **`docs/LABELING_PIPELINE.md`** — Brief for the labeling-pipeline build (next task on the rig).
+
+## Relevant tech docs (`~/.claude/technology/`)
+
+Files in the global tech knowledge base that apply to this project. Read these before answering setup, deploy, version, or "why is this failing" questions in the relevant area.
+
+- `gemma.md` — Gemma fine-tune + on-device `.litertlm` pipeline (rig). Anything new about training the model, the pipeline, or troubleshooting goes there, not in this repo.
+
+When a tech doc proves useful here, add it to this list. When you add new content to a doc based on something learned in this project, make sure the doc is listed here.
