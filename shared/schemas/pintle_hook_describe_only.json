@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PintleHookDescribeOnly",
+  "description": "Describe-only output of the labeler for the pintle-hook inspection (v5.5). Adds photo_matches_category top-level self-check; relaxed safety_chains_clipped_to_bar enum.",
+  "type": "object",
+  "required": ["inspection_type", "evidence_type", "image_quality", "verdict", "issues_detected", "factual_summary", "photo_matches_category", "rear_assembly"],
+  "properties": {
+    "inspection_type": { "const": "pintle_hook" },
+    "evidence_type": { "const": "rear_assembly" },
+    "image_quality": { "enum": ["good", "acceptable", "poor"] },
+    "verdict": { "const": "describe_only" },
+    "issues_detected": { "type": "array", "maxItems": 0, "items": { "type": "string" } },
+    "factual_summary": { "type": "string", "maxLength": 1000 },
+    "photo_matches_category": { "enum": ["yes", "no", "unclear"] },
+    "rear_assembly": {
+      "type": "object",
+      "required": [
+        "hitch_latch_state",
+        "safety_chains_count",
+        "safety_chains_clipped_to_bar"
+      ],
+      "properties": {
+        "hitch_latch_state": { "enum": ["closed", "open", "unclear", "not_visible"] },
+        "safety_chains_count": {
+          "anyOf": [
+            { "type": "integer", "enum": [0, 1, 2] },
+            { "type": "string", "enum": ["more_than_two", "not_visible"] }
+          ]
+        },
+        "safety_chains_clipped_to_bar": {
+          "enum": ["at_least_one_clipped", "none_clipped", "unclear", "not_visible"]
+        }
+      }
+    }
+  }
+}

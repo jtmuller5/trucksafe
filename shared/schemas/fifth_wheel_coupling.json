@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FifthWheelCoupling",
+  "description": "Inspection-level fifth-wheel coupling label. v5.6: side_view simplified to two primary signals (trailer_seated_flush, gap_between_apron_and_plate); manufacturer-conditional sub-objects removed; fifth_wheel_manufacturer kept as descriptive only. lock_jaws_underneath unchanged.",
+  "type": "object",
+  "required": ["inspection_type", "evidence_type", "image_quality", "verdict", "issues_detected", "factual_summary", "photo_matches_category"],
+  "properties": {
+    "inspection_type": { "const": "fifth_wheel_coupling" },
+    "evidence_type": { "enum": ["side_view", "lock_jaws_underneath"] },
+    "image_quality": { "enum": ["good", "acceptable", "poor"] },
+    "verdict": { "enum": ["pass", "fail", "unclear"] },
+    "issues_detected": { "type": "array", "items": { "type": "string" } },
+    "factual_summary": { "type": "string", "maxLength": 1000 },
+    "photo_matches_category": { "enum": ["yes", "no", "unclear"] },
+    "side_view": {
+      "type": ["object", "null"],
+      "description": "Populated when evidence_type == 'side_view'. v5.6: primary safety signals are trailer_seated_flush and gap_between_apron_and_plate. fifth_wheel_manufacturer is descriptive only — no downstream conditional logic depends on it.",
+      "required": [
+        "trailer_seated_flush",
+        "gap_between_apron_and_plate",
+        "fifth_wheel_manufacturer"
+      ],
+      "properties": {
+        "trailer_seated_flush": { "enum": ["yes", "no", "unclear"] },
+        "gap_between_apron_and_plate": { "enum": ["none", "minor", "obvious", "not_visible"] },
+        "fifth_wheel_manufacturer": { "enum": ["fontaine", "jost", "holland", "other", "unclear", "not_visible"] }
+      }
+    },
+    "lock_jaws_underneath": {
+      "type": ["object", "null"],
+      "description": "Populated when evidence_type == 'lock_jaws_underneath'; null otherwise. fifth_wheel_variant here is mechanism-type (two-jaw vs single-bar), NOT manufacturer.",
+      "required": ["fifth_wheel_variant", "two_jaw_state", "single_bar_state", "kingpin_visible"],
+      "properties": {
+        "fifth_wheel_variant": { "enum": ["two_jaw", "single_bar", "unclear"] },
+        "two_jaw_state": { "enum": ["fully_closed", "partially_open", "open", "not_applicable", "not_visible"] },
+        "single_bar_state": { "enum": ["engaged_in_front_of_kingpin", "retracted", "not_applicable", "not_visible"] },
+        "kingpin_visible": { "enum": ["yes", "no"] }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "evidence_type": { "const": "side_view" } } },
+      "then": { "required": ["side_view"], "properties": { "side_view": { "type": "object" }, "lock_jaws_underneath": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "evidence_type": { "const": "lock_jaws_underneath" } } },
+      "then": { "required": ["lock_jaws_underneath"], "properties": { "lock_jaws_underneath": { "type": "object" }, "side_view": { "type": "null" } } }
+    }
+  ]
+}

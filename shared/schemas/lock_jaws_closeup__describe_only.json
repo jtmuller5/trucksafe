@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LockJawsCloseupDescribeOnly",
+  "description": "Intermediate describe-only label produced by the labeler. The verdict fields (`overall_status`, `confidence`, `issues_detected`) are populated downstream from external provenance, not by the model.",
+  "type": "object",
+  "required": ["category", "observations", "issues_detected", "overall_status", "confidence", "human_readable_summary"],
+  "properties": {
+    "category": { "const": "lock_jaws_closeup" },
+    "observations": {
+      "type": "object",
+      "required": ["jaws_fully_closed_around_kingpin", "kingpin_visible_in_jaws", "lock_indicator_position", "image_quality"],
+      "properties": {
+        "jaws_fully_closed_around_kingpin": { "enum": ["yes", "no", "unclear"] },
+        "kingpin_visible_in_jaws": { "type": "boolean" },
+        "lock_indicator_position": { "enum": ["locked", "unlocked", "not_visible"] },
+        "image_quality": { "enum": ["good", "poor"] }
+      }
+    },
+    "issues_detected": { "type": "array", "maxItems": 0, "items": { "type": "string" } },
+    "overall_status": { "const": "describe_only" },
+    "confidence": { "const": "describe_only" },
+    "human_readable_summary": { "type": "string", "maxLength": 500 }
+  }
+}

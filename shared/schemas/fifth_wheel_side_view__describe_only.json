@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FifthWheelSideViewDescribeOnly",
+  "description": "Intermediate describe-only label produced by the labeler. The verdict fields (`overall_status`, `confidence`, `issues_detected`) are populated downstream from external provenance, not by the model.",
+  "type": "object",
+  "required": ["category", "observations", "issues_detected", "overall_status", "confidence", "human_readable_summary"],
+  "properties": {
+    "category": { "const": "fifth_wheel_side_view" },
+    "observations": {
+      "type": "object",
+      "required": ["trailer_seated_flush", "visible_gap_between_apron_and_plate", "release_handle_position", "image_quality"],
+      "properties": {
+        "trailer_seated_flush": { "enum": ["yes", "no", "unclear"] },
+        "visible_gap_between_apron_and_plate": { "enum": ["none", "minor", "obvious"] },
+        "release_handle_position": { "enum": ["stowed", "extended", "unclear"] },
+        "image_quality": { "enum": ["good", "poor"] }
+      }
+    },
+    "issues_detected": { "type": "array", "maxItems": 0, "items": { "type": "string" } },
+    "overall_status": { "const": "describe_only" },
+    "confidence": { "const": "describe_only" },
+    "human_readable_summary": { "type": "string", "maxLength": 500 }
+  }
+}
